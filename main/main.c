@@ -21,7 +21,7 @@
 #define PASSWORD	"jnc196809"
 #define PORT	3333
 #define SAMPLE_RATE	8000
-#define BUFFER_MAX	8000
+#define BUFFER_MAX	500
 #define LED_GOTIP	GPIO_NUM_2
 size_t i2s_bytes_write = 0;
 
@@ -54,7 +54,6 @@ static void recv_all(int sock, void *vbuf, size_t size_buf)
 			printf("Recebimento completo\n");
 			break;
 		}
-		printf("recv size = %d\n",recv_size);
 		i2s_write(0, buf, recv_size,&i2s_bytes_write,  portMAX_DELAY);
 		size_left -= recv_size;
 		buf += recv_size;
@@ -76,12 +75,11 @@ static void udp_server_task(void *pvParameters)
     addr_family = AF_INET;
     ip_protocol = IPPROTO_IP;
     inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
-
-    int sock = socket(addr_family,SOCK_DGRAM, ip_protocol);
-    bind(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-
+   	printf("port = %d recebendo\n",PORT);
     while(1){
-    	printf("port = %d recebendo\n",PORT);
+        int sock = socket(addr_family,SOCK_DGRAM, ip_protocol);
+        bind(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+
     	recv_all(sock,(void*)&audioBuffer, sizeof(int16_t)*BUFFER_MAX);
     	shutdown(sock, 0);
     	close(sock);
