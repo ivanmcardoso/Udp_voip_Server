@@ -21,7 +21,7 @@
 #define PASSWORD	"jnc196809"
 #define PORT	3333
 #define SAMPLE_RATE	8000
-#define BUFFER_MAX	500
+#define BUFFER_MAX	8000
 #define LED_GOTIP	GPIO_NUM_2
 size_t i2s_bytes_write = 0;
 
@@ -41,7 +41,6 @@ static void recv_all(int sock, void *vbuf, size_t size_buf)
     socklen_t socklen = sizeof(source_addr);
 
 	size_left = size_buf;
-	//printf("antes do while\n");
 	while(1)
 	{
 		if((recv_size = recvfrom(sock, buf, size_left, flags, (struct sockaddr *)&source_addr, &socklen)) == -1)
@@ -49,16 +48,17 @@ static void recv_all(int sock, void *vbuf, size_t size_buf)
 			printf("Erro ao receber\n");
 			break;
 		}
-		if(recv_size == 0)
+		if(size_left == 0)
 		{
 			printf("Recebimento completo\n");
 			break;
 		}
-		i2s_write(0, buf, recv_size,&i2s_bytes_write,  portMAX_DELAY);
+		if(recv_size > 0)i2s_write(0, buf, recv_size,&i2s_bytes_write,  portMAX_DELAY);
+		printf("size left = %d\n",size_left);
 		size_left -= recv_size;
 		buf += recv_size;
+		recv_size = 0;
 	}
-
 	return;
 }
 
@@ -102,10 +102,10 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         esp_wifi_connect();
         break;
     case SYSTEM_EVENT_STA_CONNECTED:
-        gpio_set_level(LED_GOTIP, 1);
         break;
     case SYSTEM_EVENT_STA_GOT_IP:
-        xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    	gpio_set_level(LED_GOTIP, 1);
+    	xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
         xTaskCreatePinnedToCore(udp_server_task, "udp_server", 4096, NULL, 5, NULL,0);
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
@@ -149,8 +149,8 @@ static void i2s_setup(){
         .bits_per_sample = 16,
         .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
         .communication_format = I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB,
-        .dma_buf_count = 3,
-        .dma_buf_len = 1024,
+        .dma_buf_count = 2,
+        .dma_buf_len = 1000,
         .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1
     };
     i2s_pin_config_t pin_config = {
